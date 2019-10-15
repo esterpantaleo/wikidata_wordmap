@@ -1,0 +1,95 @@
+body, html {
+    overflow: visible;
+}
+
+.header {
+    padding: 3em;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    color: black;
+    text-align: center;
+    border-radius: 6px;
+    background: #1abc9c;
+}
+
+.ocean {
+    fill: #bfd7e4;
+}
+
+.land {
+    fill: #eaeaea;
+    stroke: lightgray;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.land:hover {
+    fill: #e0b78f;
+}
+
+#search {
+    font-size: 2em;
+    border-radius: 6px;
+}
+
+#searchsubmit {
+    position: relative;
+    left: -1.5em;
+    top: 0.1em;
+    color: #7B7B7B;
+    cursor: pointer;
+    width: 0;
+    font-size: 2em;
+}
+
+.place,
+.place-label {
+    fill: #444;
+}
+
+circle {
+    fill: none;
+}
+
+text {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 1em;
+    pointer-events: none;
+}
+
+.label rect {
+    fill: transparent;
+}
+
+div.tooltip {
+    color: black; 
+    background: #66CDAA; 
+    border-radius: 6px; 
+    box-shadow: 0px 0px 2px 0px #a6a6a6; 
+    padding: .2em;
+    opacity: 0.8; 
+    position: absolute;
+    font-size: 2em;
+    text-align: left;
+}
+
+.hidden {
+    display: none;
+}
+
+.messagenotfound {
+    font-size: 3em;
+    text-anchor: middle;
+}
+
+footer {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%; 
+    color: black;
+    text-align: center;
+}
