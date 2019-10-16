@@ -1,7 +1,7 @@
 ### DATA CLEANING
 
 #### GEOJSON DOWNLOAD
-THe map was downloaded world from https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/countries
+The map was downloaded world from https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/administrative-units-statistical-units/countries
 version
 {
   "Administrative or statistical unit": "Countries 2016",
@@ -12,4 +12,4 @@ version
 
 #### GEOJSON SIMPLIFICATION
 The geoJSON was simplified using mapshaper to reduce the file size.
-CNTR_RG_01M_2016_4326_mapshaper_simplified
+
