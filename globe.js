@@ -4,10 +4,22 @@ var encodeQuery = query => {
     return ENDPOINT + "?query=" + encodeURIComponent(query);
 };
 
-var queryTranslations = englishWord => {
+var queryItem = englishWord => {
+    var query = "SELECT ?item  (count(?item) as ?c)  where { " +
+	"?item rdfs:label \"" + englishWord + "\"@en . " +
+	"?item rdfs:label ?label . " +
+	"SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" . } " +
+	"} " +
+	"group by ?item " +
+	"ORDER BY DESC(?c) " +
+	"LIMIT 1 ";
+    console.log(query);
+    return encodeQuery(query);
+};
+
+var queryTranslations = item => {
     var query = "SELECT DISTINCT ?label ?langLabel ?lon ?lat { " +
-        "?item rdfs:label \"" + englishWord + "\"@en . " +
-        "?item rdfs:label ?label . " +
+        "<" + item + "> rdfs:label ?label . " +
         "bind(lang(?label) as ?code) . " +
         "?lang wdt:P424 ?code . " +     //wikimedia code             
         "?lang p:P625 ?coordinate . " +
@@ -16,6 +28,7 @@ var queryTranslations = englishWord => {
         "?coordinate_node wikibase:geoLatitude ?lat . " +
         "SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" . } " +
         "}";
+    console.log(query);
     return encodeQuery(query);
 };
 
@@ -105,6 +118,7 @@ d3.json("globe.json", json => {
 
     function showCountryTooltip(d) {
 	var label = "<b>" + d.properties.NAME_ENGL + "</b>";
+	console.log(points)
 	if (typeof points !== 'undefined' && points.length > 0) {
             var tooltipArray = points.filter(p => d3.geoContains(d, p.coordinates))
 		.map(p => p.label + " (" + p.language + ")");
@@ -174,65 +188,72 @@ d3.json("globe.json", json => {
 
     d3.select("#searchsubmit").on("click", () =>  {
         var word = d3.select("#search").node().value;
-	getXMLHttpRequest(queryTranslations(word) + "&origin=*")
-            .subscribe(response => {
-		//clean
-		d3.selectAll(".label").remove();
-		tooltip.classed("hidden", true);
-		d3.selectAll(".messagenotfound").remove();
+	getXMLHttpRequest(queryItem(word) + "&origin=*")
+	    .subscribe(r => {
+		var item = JSON.parse(r)
+		    .results
+		    .bindings
+		    .map(p => { return p.item.value; })[0];
 		
-                points = JSON.parse(response)
-                    .results
-                    .bindings
-                    .map(p => {
-			return {
-			    "coordinates": [parseFloat(p.lon.value), parseFloat(p.lat.value)],
-			    "label": p.label.value,
-			    "language": p.langLabel.value
+		getXMLHttpRequest(queryTranslations(item) + "&origin=*")
+		    .subscribe(response => {
+			//clean
+			d3.selectAll(".label").remove();
+			tooltip.classed("hidden", true);
+			d3.selectAll(".messagenotfound").remove();
+			
+			points = JSON.parse(response)
+			    .results
+			    .bindings
+			    .map(p => {
+				return {
+				    "coordinates": [parseFloat(p.lon.value), parseFloat(p.lat.value)],
+				    "label": p.label.value,
+				    "language": p.langLabel.value
+				}
+			    })
+			if (points.length == 0){
+			    d3.select("#map")
+				.append("text")
+				.attr("class", "messagenotfound")
+				.attr("x", w/2)
+				.attr("y", h/2)
+				.html("word not found");
+			    d3.select("#map")
+				.append("svg:a")
+				.attr("class", "messagenotfound")
+				.attr("xlink:href", "https://www.wikidata.org/wiki/Special:NewItem")
+				.attr("target","_blank")
+				.append("rect")
+				.attr("class", "messagenotfound")
+				.attr("x", (w-150)/2)
+				.attr("y", (h+30)/2)
+				.attr("height", 30)
+				.attr("width", 150)
+				.style("fill", "red")
+				.attr("rx", 10)
+				.attr("ry", 10);
+			    d3.select("#map")
+				.append("svg:text")
+				.attr("class", "messagenotfound")
+				.attr("x", w/2)
+				.attr("y", h/2)
+				.attr("dy", "2em")
+				.style("fill", "black")
+				.style("text-anchor","middle")
+				.style("font-size", "20px")
+				.style("pointer-events", "none")
+				.text("add to Wikidata");
+			} else {    
+			    // render labels
+			    map.datum(points)
+				.call(labels.position(d => projection(d.coordinates)));
+			    map.selectAll("rect")
+				.on("mouseover", showWordTooltip)
+				.on("mouseout", tooltip.classed("hidden", true));
 			}
-		    })
-		
-		if (points.length == 0){
-		    d3.select("#map")
-			.append("text")
-			.attr("class", "messagenotfound")
-			.attr("x", w/2)
-			.attr("y", h/2)
-			.html("word not found");
-		    d3.select("#map")
-			.append("svg:a")
-			.attr("class", "messagenotfound")
-			.attr("xlink:href", "https://www.wikidata.org/wiki/Special:NewItem")
-			.attr("target","_blank")
-			.append("rect")
-			.attr("class", "messagenotfound")
-			.attr("x", (w-150)/2)
-			.attr("y", (h+30)/2)
-			.attr("height", 30)
-			.attr("width", 150)
-			.style("fill", "red")
-			.attr("rx", 10)
-			.attr("ry", 10);
-		    d3.select("#map")
-			.append("svg:text")
-			.attr("class", "messagenotfound")
-			.attr("x", w/2)
-                        .attr("y", h/2)
-			.attr("dy", "2em")
-			.style("fill", "black")
-			.style("text-anchor","middle")
-			.style("font-size", "20px")
-			.style("pointer-events", "none")
-			.text("add to Wikidata");
-		} else {    
-		    // render labels
-		    map.datum(points)
-			.call(labels.position(d => projection(d.coordinates)));
-		    map.selectAll("rect")
-			.on("mouseover", showWordTooltip)
-			.on("mouseout", tooltip.classed("hidden", true));
-		}
-		});
+		    });
+	    })
 		       
     })
 
