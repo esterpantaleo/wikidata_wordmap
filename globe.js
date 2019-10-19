@@ -5,9 +5,10 @@ var encodeQuery = query => {
 };
 
 var queryItem = englishWord => {
-    var query = "SELECT ?item  (count(?item) as ?c)  where { " +
+    var query = "SELECT ?item  (count(?label) as ?c)  where { " +
 	"?item rdfs:label \"" + englishWord + "\"@en . " +
 	"?item rdfs:label ?label . " +
+	"FILTER NOT EXISTS { ?item wdt:P31 wd:Q101352 . } " +
 	"SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" . } " +
 	"} " +
 	"group by ?item " +
