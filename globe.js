@@ -14,7 +14,6 @@ var queryItem = englishWord => {
 	"group by ?item " +
 	"ORDER BY DESC(?c) " +
 	"LIMIT 1 ";
-    console.log(query);
     return encodeQuery(query);
 };
 
@@ -29,7 +28,6 @@ var queryTranslations = item => {
         "?coordinate_node wikibase:geoLatitude ?lat . " +
         "SERVICE wikibase:label { bd:serviceParam wikibase:language \"en\" . } " +
         "}";
-    console.log(query);
     return encodeQuery(query);
 };
 
@@ -53,8 +51,8 @@ var getXMLHttpRequest = url => {
 	    d3.select("#map")
 		.append("text")
 		.attr("class", "messagenotfound")
-		.attr("x", w/2)
-		.attr("y", h/2)
+		.attr("x", "50%")
+		.attr("y", "50%")
 		.html("word not found")
         };
         req.setRequestHeader('Accept', 'application/json, text/javascript');
@@ -79,7 +77,14 @@ d3.json("globe.json", json => {
     // width and height                
     var w = window.innerWidth;
     var h = window.innerHeight;
-    
+
+    var starttooltip = d3.select("#svgdiv")
+	.append("div")
+	.attr("class", "starttooltip")
+	.style("left", "30%")
+	.style("top", "30%")
+	.html("Type an English word in the search bar and see its translations on the map. <br><br>Data is extracted from Wikidata - from item labels in different languages and language coordinate locations.");
+
     // scale globe to size of window
     var scl = Math.min(w, h)/2.5,
 	currentScl = scl;
@@ -87,7 +92,7 @@ d3.json("globe.json", json => {
     // map projection        
     var projection = d3.geoOrthographic()
 	.scale(scl)
-	.translate([w/2, h/2]);
+	.translate([Math.max(scl, w/1.9), Math.max(scl, h/1.9)]);
     
     var path = d3.geoPath()
 	.projection(projection);
@@ -95,8 +100,8 @@ d3.json("globe.json", json => {
     // append svg       
     var svg = d3.select("#svgdiv")
 	.append("svg")
-	.attr("width", w)
-	.attr("height", h);
+	.attr("width", Math.max(scl*2.5, w))
+	.attr("height", Math.max(scl*2.5, h));
 
     // append g element for map                                  
     var map = svg.append("g")
@@ -118,8 +123,7 @@ d3.json("globe.json", json => {
     svg.call(zoom);
 
     function showCountryTooltip(d) {
-	var label = "<b>" + d.properties.NAME_ENGL + "</b>";
-	console.log(points)
+	var label = "<b>" + d.properties.NAME_ENGL + "</b>";	
 	if (typeof points !== 'undefined' && points.length > 0) {
             var tooltipArray = points.filter(p => d3.geoContains(d, p.coordinates))
 		.map(p => p.label + " (" + p.language + ")");
@@ -148,8 +152,13 @@ d3.json("globe.json", json => {
         .datum({type: "Sphere"})
         .attr("class", "ocean")
         .attr("d", path)
-	.on("mouseover", tooltip.classed("hidden", true));
-    
+	.on("mouseover", () => {
+	    tooltip.classed("hidden", true);
+	})
+	.on("mouseout", () => {
+            tooltip.classed("hidden", true);
+        });
+        
     map.selectAll("lands")
 	.data(json.features)
 	.enter()
@@ -157,9 +166,11 @@ d3.json("globe.json", json => {
 	.attr("class", "land")
 	.attr("d", path)
 	.on("mouseover", showCountryTooltip)
-	.on("mouseout", tooltip.classed("hidden", true));
+	.on("mouseout", () => {
+	    tooltip.classed("hidden", true);
+	});
 
-    var labelPadding = 2;
+    var labelPadding = 6;
 
     // the component used to render each label               
     var textLabel = fc.layoutTextLabel()
@@ -178,6 +189,18 @@ d3.json("globe.json", json => {
 		.select('text')
 		.node()
 		.getBBox();
+	    d3.select(g[i])
+                .select('text')
+                .node().style.fontWeight = "bold";
+	    d3.select(g[i])
+                .select('text')
+                .node().style.fontFamily = "Cairo";
+	     d3.select(g[i])
+                .select('text')
+                .node().style.textShadow = "2px 2px  0 white";
+	    d3.select(g[i])
+                .select('text')
+                .node().style.fontSize = "1.5em";
             return [textSize.width + labelPadding * 2, textSize.height + labelPadding * 2];
 	})
 	.component(textLabel);
@@ -185,10 +208,28 @@ d3.json("globe.json", json => {
   /*  // render labels                                                       
     map.datum(centroids.filter(d => !(isNaN(d.coordinates[0]) || isNaN(d.coordinates[1]))))
 	.call(labels.position(d => d.coordinates));
-*/
+  */
 
+    d3.select("#question")
+	.on("mouseover", () => {
+	    var starttooltip = d3.select("#svgdiv")
+		.append("div")
+		.attr("class", "questiontooltip")
+		.style("left", "30%")
+		.style("top", "30%")
+		.html("Cannot find a translation in a specific language? This visualization uses data available in Wikidata. Check that the label of the selected Wikidata item in that language is available. Still cannot find it? Check that the language has the property \"coordinate location\". Otherwise add missing data to Wikidata, wait some time, and the visualization will update itself!") 
+	})
+	.on("mouseout", () => {
+	    d3.select(".questiontooltip")
+		.remove();
+	});
+			      
     d3.select("#searchsubmit").on("click", () =>  {
-        var word = d3.select("#search").node().value;
+	d3.select(".starttooltip")
+	    .remove();
+        var word = d3.select("#search")
+	    .node()
+	    .value;
 	getXMLHttpRequest(queryItem(word) + "&origin=*")
 	    .subscribe(r => {
 		var item = JSON.parse(r)
@@ -213,12 +254,15 @@ d3.json("globe.json", json => {
 				    "language": p.langLabel.value
 				}
 			    })
+
+			var x = Math.max(scl, w/1.9),
+			    y =  Math.max(scl, h/1.9);
 			if (points.length == 0){
 			    d3.select("#map")
 				.append("text")
 				.attr("class", "messagenotfound")
-				.attr("x", w/2)
-				.attr("y", h/2)
+				.attr("x", x)
+				.attr("y", y)
 				.html("word not found");
 			    d3.select("#map")
 				.append("svg:a")
@@ -227,18 +271,18 @@ d3.json("globe.json", json => {
 				.attr("target","_blank")
 				.append("rect")
 				.attr("class", "messagenotfound")
-				.attr("x", (w-150)/2)
-				.attr("y", (h+30)/2)
+				.attr("x", x-(150/2))
+				.attr("y", y+(30/2))
 				.attr("height", 30)
 				.attr("width", 150)
 				.style("fill", "red")
 				.attr("rx", 10)
-				.attr("ry", 10);
+				.attr("ry", 10)
 			    d3.select("#map")
 				.append("svg:text")
 				.attr("class", "messagenotfound")
-				.attr("x", w/2)
-				.attr("y", h/2)
+				.attr("x", x)
+				.attr("y", y)
 				.attr("dy", "2em")
 				.style("fill", "black")
 				.style("text-anchor","middle")
@@ -254,8 +298,7 @@ d3.json("globe.json", json => {
 				.on("mouseout", tooltip.classed("hidden", true));
 			}
 		    });
-	    })
-		       
+	    })		       
     })
 
     // functions for dragging
@@ -263,7 +306,12 @@ d3.json("globe.json", json => {
 	gpos0 = projection.invert(d3.mouse(this));
 	o0 = projection.rotate();
     }
-    
+
+    const config = {
+              speed: 0.005,
+              verticalTilt: -30,
+              horizontalTilt: 0
+            }
     function dragged() {
 	gpos1 = projection.invert(d3.mouse(this));
 	o0 = projection.rotate();
@@ -281,7 +329,6 @@ d3.json("globe.json", json => {
 	map.selectAll(".land")
             .on("mouseover", showCountryTooltip)
 	    .on("mouseout", tooltip.classed("hidden", true));
-
     }
 
     // functions for zooming
