@@ -13,3 +13,7 @@ version
 #### GEOJSON SIMPLIFICATION
 The geoJSON was simplified using mapshaper to reduce the file size.
 
+#### MISSING LANGUAGE? ####
+This can happen for various reasons:
+* Missing label: just add translation to Wikidata item
+* Translation is missing for any word: make sure that language item has coordinates (P625) set. https://wals.info/languoid can be used as source.
